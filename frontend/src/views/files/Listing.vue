@@ -44,6 +44,15 @@
             :label="$t('buttons.delete')"
             show="delete"
           />
+          <a 
+            v-if="headerButtons.openInNewTab"
+            target="_blank"
+            @click="openInNewTab"
+            :aria-label="$t('buttons.openFile')" 
+            :title="$t('buttons.openFile')" 
+            class="action">
+            <i class="material-icons">open_in_new</i>
+          </a>
         </template>
 
         <action
@@ -261,7 +270,7 @@
 <script>
 import Vue from "vue";
 import { mapState, mapGetters, mapMutations } from "vuex";
-import { users, files as api } from "@/api";
+import { users, files as api, share } from "@/api";
 import { enableExec } from "@/utils/constants";
 import * as upload from "@/utils/upload";
 import css from "@/utils/css";
@@ -366,6 +375,7 @@ export default {
         share: this.selectedCount === 1 && this.user.perm.share,
         move: this.selectedCount > 0 && this.user.perm.rename,
         copy: this.selectedCount > 0 && this.user.perm.create,
+        openInNewTab: this.selectedCount > 0 && this.user.perm.create,
       };
     },
     isMobile() {
@@ -803,6 +813,24 @@ export default {
           api.download(format, ...files);
         },
       });
+    },
+    openInNewTab: async function() {
+      const baseURL = window.location.origin
+      const url  = this.req.items[this.selected[0]].url
+      console.log("archakk_logs in Listing url -- "+ url )
+      const links = await share.get(url)
+      let hash = ""
+      if (links.length === 0 ) {
+        console.log("archakk_logs , no has yet! creating one.. ")
+        const createResp = await share.create(url, "");
+        hash = createResp.hash
+      } else {
+        hash = links[0].hash
+      }
+      const downloadUrl = `${baseURL}/api/public/dl/${hash}`;
+      let fullUrl = new URL(downloadUrl);
+      fullUrl.searchParams.set("inline", "true");
+      window.open(fullUrl, "_blank"); 
     },
     switchView: async function () {
       this.$store.commit("closeHovers");
